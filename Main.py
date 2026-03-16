@@ -1,130 +1,101 @@
 import pygame
-import math
 import random
+import math
 
 # Constants
+WIDTH, HEIGHT = 800, 600
 FPS = 60
-SCREEN_WIDTH = 800
-SCREEN_HEIGHT = 600
+COLORS = {
+    'black': (0, 0, 0),
+    'white': (255, 255, 255),
+    'red': (255, 0, 0),
+    'green': (0, 255, 0),
+    'blue': (0, 0, 255)
+}
+PLAYER_SPEED = 5
+ENEMY_SPEED = 2
+FOV_ANGLE = math.pi / 3
 
-# Colors
-BLACK = (0, 0, 0)
-WHITE = (255, 255, 255)
-GRAY = (200, 200, 200)
-GREEN = (0, 255, 0)
-RED = (255, 0, 0)
+# Game initialization
+pygame.init()
 
-# Player Class
 class Player:
     def __init__(self, x, y):
         self.x = x
         self.y = y
-        self.angle = 0
-        self.speed = 5
-        self.vision_radius = 100
-        self.vision_angle = math.pi / 4  # 45 degrees
+        self.fov = FOV_ANGLE
+        self.memory = []
+        self.health = 100
 
     def move(self, dx, dy):
-        self.x += dx * self.speed
-        self.y += dy * self.speed
-        self.x = max(0, min(SCREEN_WIDTH, self.x))  # Keep player on screen
-        self.y = max(0, min(SCREEN_HEIGHT, self.y))
+        self.x += dx * PLAYER_SPEED
+        self.y += dy * PLAYER_SPEED
 
-    def rotate(self, d_angle):
-        self.angle += d_angle
-        self.angle %= 2 * math.pi  # Keep angle within 0-2π
+    def detect_enemy(self, enemies):
+        # Implement FOV and detection logic
+        pass
 
-    def draw(self, surface):
-        # Draw vision cone
-        self.draw_vision_cone(surface)
-        # Draw player
-        pygame.draw.circle(surface, GREEN, (int(self.x), int(self.y)), 10)
-
-    def draw_vision_cone(self, surface):
-        vision_points = []
-        for i in range(-15, 16, 1):
-            angle = self.angle + math.radians(i)
-            x = self.x + self.vision_radius * math.cos(angle)
-            y = self.y + self.vision_radius * math.sin(angle)
-            vision_points.append((x, y))
-        pygame.draw.polygon(surface, WHITE, [(self.x, self.y)] + vision_points)
-
-# Enemy Class
 class Enemy:
     def __init__(self, x, y):
         self.x = x
         self.y = y
-        self.patrol_points = [(x, y), (random.randint(0, SCREEN_WIDTH), random.randint(0, SCREEN_HEIGHT))]
-        self.current_patrol_index = 0
-        self.speed = 2
-
-    def update(self, player):
-        if self.detect_player(player):
-            self.chase_player(player)
-        else:
-            self.patrol()
+        self.patrolling = True
 
     def patrol(self):
-        target_x, target_y = self.patrol_points[self.current_patrol_index]
-        if abs(self.x - target_x) < 5 and abs(self.y - target_y) < 5:
-            self.current_patrol_index = (self.current_patrol_index + 1) % len(self.patrol_points)
-        else:
-            dx = target_x - self.x
-            dy = target_y - self.y
-            angle = math.atan2(dy, dx)
-            self.x += math.cos(angle) * self.speed
-            self.y += math.sin(angle) * self.speed
+        # Implement patrol logic
+        pass
 
     def detect_player(self, player):
-        distance = math.sqrt((self.x - player.x) ** 2 + (self.y - player.y) ** 2)
-        if distance < 100:
-            angle_to_player = math.atan2(player.y - self.y, player.x - self.x)
-            if abs(angle_to_player - self.x) < player.vision_angle / 2:
-                return True
-        return False
+        # Implement detection logic
+        pass
 
-    def chase_player(self, player):
-        dx = player.x - self.x
-        dy = player.y - self.y
-        angle = math.atan2(dy, dx)
-        self.x += math.cos(angle) * self.speed
-        self.y += math.sin(angle) * self.speed
+class Bullet:
+    def __init__(self, x, y, direction):
+        self.x = x
+        self.y = y
+        self.direction = direction
+        self.speed = 10
 
-    def draw(self, surface):
-        pygame.draw.circle(surface, RED, (int(self.x), int(self.y)), 10)
+    def update(self):
+        self.x += math.cos(self.direction) * self.speed
+        self.y += math.sin(self.direction) * self.speed
 
-# Game Class
-class Game:
-    def __init__(self):
-        pygame.init()
-        self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-        self.clock = pygame.time.Clock()
-        self.player = Player(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2)
-        self.enemies = [Enemy(random.randint(0, SCREEN_WIDTH), random.randint(0, SCREEN_HEIGHT)) for _ in range(5)]
+class Wall:
+    def __init__(self, x, y, width, height):
+        self.rect = pygame.Rect(x, y, width, height)
 
-    def run(self):
-        running = True
-        while running:
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    running = False
+class Door:
+    def __init__(self, x, y, width, height):
+        self.rect = pygame.Rect(x, y, width, height)
 
-            keys = pygame.key.get_pressed()
-            dx = keys[pygame.K_d] - keys[pygame.K_a]
-            dy = keys[pygame.K_s] - keys[pygame.K_w]
-            self.player.move(dx, dy)
+def main():
+    clock = pygame.time.Clock()
+    screen = pygame.display.set_mode((WIDTH, HEIGHT))
+    player = Player(WIDTH // 2, HEIGHT // 2)
+    enemies = [Enemy(random.randint(0, WIDTH), random.randint(0, HEIGHT)) for _ in range(5)]
+    bullets = []
 
-            self.screen.fill(BLACK)
-            self.player.draw(self.screen)
-            for enemy in self.enemies:
-                enemy.update(self.player)
-                enemy.draw(self.screen)
+    running = True
+    while running:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
 
-            pygame.display.flip()
-            self.clock.tick(FPS)
+        keys = pygame.key.get_pressed()
+        dx, dy = 0, 0
+        if keys[pygame.K_LEFT]: dx = -1
+        if keys[pygame.K_RIGHT]: dx = 1
+        if keys[pygame.K_UP]: dy = -1
+        if keys[pygame.K_DOWN]: dy = 1
 
-        pygame.quit()
+        player.move(dx, dy)
+        screen.fill(COLORS['black'])
+
+        # Update and draw player/enemies/bullets
+        pygame.display.flip()
+        clock.tick(FPS)
+
+    pygame.quit()
 
 if __name__ == '__main__':
-    game = Game()
-    game.run()
+    main()
